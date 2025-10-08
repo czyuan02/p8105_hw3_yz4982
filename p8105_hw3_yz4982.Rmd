@@ -7,7 +7,7 @@ output:
 
 Promblem 1
 ------------------------------------------------------------
-### Short Description
+### Library
 ```{r}
 library(tidyverse)
 library(p8105.datasets)
@@ -38,7 +38,7 @@ cat(
 )
 
 # check variables and type
-glimpse(instacart)
+# glimpse(instacart)
 
 # key varibles
 set.seed(8105)
@@ -60,8 +60,8 @@ aisle_counts <- instacart |>
 n_aisles <- nrow(aisle_counts)
 n_aisles
 
-# Top 10 most ordered aisles
-top_aisles <- aisle_counts |> slice_max(n_items, n = 10)
+# Top 5 most ordered aisles
+top_aisles <- aisle_counts |> slice_max(n_items, n = 5)
 top_aisles
 ```
 
@@ -112,7 +112,7 @@ top3_tbl <- instacart |>
 top3_tbl
 ```
 
-### Mean hour tbl
+### Mean Hour of The Day
 ```{r}
 mean_hour_tbl <- instacart |>
   filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) |>
@@ -129,6 +129,7 @@ mean_hour_tbl <- instacart |>
   tidyr::pivot_wider(names_from = day_convert, values_from = mean_hour) |>
   rename(Product = product_name)
 
+# Print
 mean_hour_tbl
 ```
 
@@ -144,19 +145,52 @@ zip_code_df =
 glimpse(zip_code_df)
 
 
-zip_NYC_df = 
+zori_raw = 
   read_csv("p8105_hw3_yz4982_files/zillow_data/Zip_zori_uc_sfrcondomfr_sm_month_NYC.csv", 
            na = c("NA", ".", ""))
 
-# check variables and type
+# Check variables and type
 # glimpse(zip_code_df)
-# glimpse(zip_NYC_df)
+# glimpse(zori_raw )
 ```
 
-### WHAT
+### Clean Data
+```{r}
+
+zori_long <- zori_raw |>
+  rename(zip = RegionName) |>
+  pivot_longer(
+    cols = matches("^\\d{4}-\\d{2}-\\d{2}$"),
+    names_to = "month",
+    values_to = "zori"
+  ) |>
+  mutate(month = lubridate::ymd(month)) |>
+  # keep only 2015-01-31 to 2024-08-31
+  filter(month >= ymd("2015-01-31"),
+         month <= ymd("2024-08-31"))
+```
+
+### Statisic Calculate
+```{r}
+zip_month_counts <- zori_long |>
+  group_by(zip) |>
+  summarise(months_observed = sum(!is.na(zori)), .groups = "drop")
+
+# ZIP codes are observed 116 times
+n_exact_116 <- sum(zip_month_counts$months_observed == 116)
+
+# Observed fewer than 10 times
+n_fewer_10  <- sum(zip_month_counts$months_observed < 10)
+
+# Print
+cat("ZIP codes are observed 116 times：", n_exact_116, "\n")
+cat("Observed fewer than 10 times：", n_fewer_10, "\n")
+```
+
+Why are some ZIP codes are observed rarely and others observed in each month?
+
+
+### Reader-friendly Table 
 ```{r}
 
 ```
-
-
-

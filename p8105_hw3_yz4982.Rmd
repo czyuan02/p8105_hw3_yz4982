@@ -70,8 +70,8 @@ top_aisles
 plot_df <- aisle_counts |>
   filter(n_items > 10000) |>
   mutate(aisle = fct_reorder(aisle, n_items))
-plot_df |>
-  ggplot(aes(x = n_items, y = aisle)) +
+
+p <- ggplot(plot_df, aes(x = n_items, y = aisle)) +
   geom_col() +
   labs(
     title = "Number of items ordered by aisle (> 10,000)",
@@ -80,10 +80,12 @@ plot_df |>
   )
 
 ggplot2::ggsave(
-  filename = Figures/aisle_items_over_10k.png",  # 自定义名字和路径
+  filename = "Figures/aisle_items_over_10k.png",
   plot = p,
   width = 8, height = 5, units = "in", dpi = 300
 )
+
+print (p)
 ```
 
 ### Table of Top 3 Popular Items in Each of The Aisles 
@@ -135,7 +137,7 @@ Promblem 2
 ### Import Data
 ```{r}
 zip_code_df = 
-  read_csv("zillow_data/Zip Codes.csv", 
+  read_csv("p8105_hw3_yz4982_files/zillow_data/Zip Codes.csv", 
            na = c("NA", ".", ""))
 
 # check variables and type
@@ -143,7 +145,7 @@ glimpse(zip_code_df)
 
 
 zip_NYC_df = 
-  read_csv("zillow_data/Zip_zori_uc_sfrcondomfr_sm_month_NYC.csv", 
+  read_csv("p8105_hw3_yz4982_files/zillow_data/Zip_zori_uc_sfrcondomfr_sm_month_NYC.csv", 
            na = c("NA", ".", ""))
 
 # check variables and type

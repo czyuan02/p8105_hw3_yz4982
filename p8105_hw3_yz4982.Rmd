@@ -2,10 +2,8 @@
 title: "p8105_hw3_yz4982"
 author: "Yuanyuan Zhang"
 output:
-  html_document:
-    toc: true
-    toc_float: true
----
+  github_document: default
+--- 
 
 Promblem 1
 ------------------------------------------------------------
@@ -14,10 +12,13 @@ Promblem 1
 library(tidyverse)
 library(p8105.datasets)
 library(forcats) 
+library(janitor)
+library(lubridate)
 
 data("instacart")
 ```
 
+### Description
 ```{r}
 n_rows <- nrow(instacart)
 n_cols <- ncol(instacart)
@@ -26,16 +27,14 @@ n_users       <- n_distinct(instacart$user_id)
 n_orders      <- n_distinct(instacart$order_id)
 n_products    <- n_distinct(instacart$product_id)
 n_aisles      <- n_distinct(instacart$aisle)
-n_departments <- n_distinct(instacart$department)
 
 cat(
-  "row:", n_rows, 
-  "colunm:", n_cols, "\n",
-  "numbe of unuique user:", n_users, 
-  "number of unique orders:", n_orders, "\n",
-  "number of unique products ", n_products, 
-  "number of unique aisle:", n_aisles, 
-  "number of unique department:", n_departments, "\n"
+  "rows:", n_rows,
+  "columns:", n_cols, "\n",
+  "unique users:", n_users,
+  "unique orders:", n_orders, "\n",
+  "unique products:", n_products,
+  "unique aisles:", n_aisles, "\n"
 )
 
 # check variables and type
@@ -105,6 +104,7 @@ top3_tbl <- instacart |>
 top3_tbl
 ```
 
+### Mean hour tbl
 ```{r}
 mean_hour_tbl <- instacart |>
   filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) |>
@@ -124,8 +124,31 @@ mean_hour_tbl <- instacart |>
 mean_hour_tbl
 ```
 
+Promblem 2
+------------------------------------------------------------
+### Import Data
+```{r}
+zip_code_df = 
+  read_csv("zillow_data/Zip Codes.csv", 
+           na = c("NA", ".", ""))
+
+# check variables and type
+glimpse(zip_code_df)
+
+
+zip_NYC_df = 
+  read_csv("zillow_data/Zip_zori_uc_sfrcondomfr_sm_month_NYC.csv", 
+           na = c("NA", ".", ""))
+
+# check variables and type
+# glimpse(zip_code_df)
+# glimpse(zip_NYC_df)
+```
+
+### WHAT
 ```{r}
 
 ```
+
 
 

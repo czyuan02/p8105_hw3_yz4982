@@ -84,12 +84,15 @@ plot_df |>
 ### Table of Top 3 Popular Items in Each of The Aisles 
 ```{r}
 top3_tbl <- instacart |>
+  # Keep only rows from these three aisles
   filter(aisle %in% c("baking ingredients",
                       "dog food care",
                       "packaged vegetables fruits")) |>
+  # Count
   count(aisle, product_name, name = "times_ordered", sort = TRUE) |>
+  # Make group
   group_by(aisle) |>
-  # Take the top 3 products per aisle
+  # Take the top 3 products each aisle
   slice_max(times_ordered, n = 3) |>
   # Order by aisle
   arrange(aisle, desc(times_ordered)) |>
@@ -106,19 +109,23 @@ top3_tbl
 mean_hour_tbl <- instacart |>
   filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) |>
   mutate(
-    # Instacart encodes 0=Sunday, ..., 6=Saturday
-    dow = factor(order_dow, levels = 0:6,
+    # Instacart encodes convert
+    day_convert = factor(order_dow, levels = 0:6,
                  labels = c("Sun","Mon","Tue","Wed","Thu","Fri","Sat"))
   ) |>
-  group_by(product_name, dow) |>
-  summarise(mean_hour = mean(order_hour_of_day, na.rm = TRUE), .groups = "drop") |>
-  tidyr::pivot_wider(names_from = dow, values_from = mean_hour) |>
-  mutate(across(where(is.numeric), ~ round(.x, 2))) |>
-  arrange(match(product_name, c("Pink Lady Apples", "Coffee Ice Cream"))) |>
+  # Make group
+  group_by(product_name, day_convert) |>
+  # Calculate the mean
+  summarise(mean_hour = mean(order_hour_of_day), .groups = "drop") |>
+  # Make 2*7 table
+  tidyr::pivot_wider(names_from = day_convert, values_from = mean_hour) |>
   rename(Product = product_name)
 
 mean_hour_tbl
 ```
 
+```{r}
+
+```
 
 

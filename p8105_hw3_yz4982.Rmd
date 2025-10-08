@@ -78,6 +78,12 @@ plot_df |>
     x = "Items ordered",
     y = "Aisle"
   )
+
+ggplot2::ggsave(
+  filename = Figures/aisle_items_over_10k.png",  # 自定义名字和路径
+  plot = p,
+  width = 8, height = 5, units = "in", dpi = 300
+)
 ```
 
 ### Table of Top 3 Popular Items in Each of The Aisles 

@@ -14,6 +14,8 @@ library(p8105.datasets)
 library(forcats) 
 library(janitor)
 library(lubridate)
+library(ggplot2)
+library(patchwork)
 
 data("instacart")
 ```
@@ -187,10 +189,142 @@ cat("ZIP codes are observed 116 times：", n_exact_116, "\n")
 cat("Observed fewer than 10 times：", n_fewer_10, "\n")
 ```
 
-Why are some ZIP codes are observed rarely and others observed in each month?
+Make a table see
+```{r}
+summary_tbl <- zip_month_counts |>
+  mutate(coverage = case_when(
+    months_observed == 116 ~ "total 116 month",
+    months_observed < 10   ~ "<10 month",
+    TRUE                   ~ "partial 10–115 month"
+  )) |>
+  count(coverage, name = "count zip") |>
+  arrange(match(coverage,
+                c("total 116 month","<10 month","partial 10–115 month")))
 
+summary_tbl
+```
+Zillow reports a monthly value only when there are enough valid rental listings; otherwise the month is NA. ZIPs with active residential markets therefore show values in all 116 months.Non-residential or special-use ZIPs and places with very few listings are often missing many months.Occasional gaps also come from boundary changes.
 
 ### Reader-friendly Table 
+```{r}
+# ZIP to Borough
+borough_xwalk <- data.frame(
+  County  = c("New York","Kings","Queens","Bronx","Richmond"),
+  borough = c("Manhattan","Brooklyn","Queens","Bronx","Staten Island"),
+  stringsAsFactors = FALSE
+)
+
+zip_to_borough <- zip_code_df |>
+  select(ZipCode, County) |>
+  left_join(borough_xwalk, by = "County") |>
+  transmute(zip = as.integer(ZipCode), borough)
+
+# Take the average of the ZIPs within the borough-year.
+borough_year <- zori_long |>
+  mutate(zip = as.integer(zip),
+         year = year(month)) |>
+  inner_join(zip_to_borough, by = "zip") |>
+  group_by(borough, zip, year) |>
+  summarise(zip_year_mean = mean(zori, na.rm = TRUE), .groups = "drop") |>
+  group_by(borough, year) |>
+  summarise(avg_rent = round(mean(zip_year_mean, na.rm = TRUE)), .groups = "drop")
+
+# Make Table
+table_wide <- borough_year |>
+  arrange(borough, year) |>
+  pivot_wider(names_from = year, values_from = avg_rent)
+
+# Print
+print(table_wide)
+
+```
+
+## Plot Showing NYC Rental Prices
+```{r}
+# ZIP annual mean
+zip_year <- zori_long |>
+  mutate(zip = as.integer(zip),
+         year = lubridate::year(month)) |>
+  inner_join(zip_to_borough, by = "zip") |>
+  group_by(borough, zip, year) |>
+  summarise(zip_year_mean = mean(zori, na.rm = TRUE), .groups = "drop")
+
+# Borough median
+borough_year_median <- zip_year |>
+  group_by(borough, year) |>
+  summarise(median_rent = median(zip_year_mean, na.rm = TRUE), .groups = "drop")
+
+
+# Plot thin lines with ZIPs, thick line is borough median
+ggplot(zip_year, aes(x = year, y = zip_year_mean, group = zip)) +
+  geom_line(alpha = 0.3) +
+  geom_line(data = borough_year_median,
+            aes(y = median_rent, group = NULL),
+            linewidth = 1) +
+  facet_wrap(~ borough, ncol = 2) +
+  labs(
+    title = "NYC Rental Prices by ZIP Annual Means",
+    x = "Year",
+    y = "Average ZORI"
+  )
+
+```
+For the full period, Manhattan is the highest, Staten Island is the lowest, Brooklyn/Queens is in the middle, and the Bronx is lower than Brooklyn/Queens but has risen rapidly in recent years. The distribution of ZIP prices is more spread out in Manhattan and Brooklyn, suggesting greater variation, and tighter in the Bronx and Staten Island, suggesting less variation. The ZIP price distribution is more spread out in Manhattan and Brooklyn, suggesting large differences, and tighter in Bronx and Staten Island, suggesting small differences).
+
+## Plot of ZIP-code-level rental prices across boroughs in 2023
+```{r}
+# Filter 2023 year calculate mean
+zip_2023 <- zori_long |>
+  mutate(year = year(month), zip = as.integer(zip)) |>
+  filter(year == 2023) |>
+  inner_join(zip_to_borough, by = "zip") |>
+  group_by(borough, zip) |>
+  summarise(zip_mean_2023 = mean(zori, na.rm = TRUE), .groups = "drop") |>
+  filter(is.finite(zip_mean_2023))  # 去掉全年都缺失的 ZIP
+
+# Create box plot
+ggplot(zip_2023, aes(x = borough, y = zip_mean_2023)) +
+  geom_boxplot(outlier.alpha = 0.3) +
+  geom_jitter(width = 0.1, alpha = 0.2) +
+  labs(
+    title = "Distribution of ZIP-level Average Rental Prices by Borough in 2023",
+    x = "Borough",
+    y = "Average ZORI in 2023"
+  )
+```
+For median, Manhattan is the highest and Staten Island is the lowest; Brooklyn and Queens is in the middle and Bronx is slightly lower. Manhattan and Brooklyn have longer box and more dispersed scatter, suggesting greater variation among ZIPs, Bronx and Staten Island are more centralized.
+
+```{r}
+p1 <- ggplot(zip_year, aes(x = year, y = zip_year_mean, group = zip)) +
+  geom_line(alpha = 0.3) +
+  geom_line(data = borough_year_median,
+            aes(y = median_rent, group = NULL),
+            linewidth = 1) +
+  facet_wrap(~ borough, ncol = 2) +
+  labs(
+    title = "NYC Rental Prices by ZIP Annual Means",
+    x = "Year",
+    y = "Average ZORI"
+  )
+
+p2 <- ggplot(zip_2023, aes(x = borough, y = zip_mean_2023)) +
+  geom_boxplot(outlier.alpha = 0.3) +
+  geom_jitter(width = 0.1, alpha = 0.2) +
+  labs(
+    title = "Distribution of ZIP-level Average Rental Prices by Borough in 2023",
+    x = "Borough",
+    y = "Average ZORI in 2023"
+  )
+
+# Combine
+combined <- p1 / p2
+ggplot2::ggsave("Figures/nyc_rental_prices_combined.png", combined, width = 10, height = 10, dpi = 300)
+combined 
+```
+
+Promblem 3
+------------------------------------------------------------
+
 ```{r}
 
 ```

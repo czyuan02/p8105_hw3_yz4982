@@ -16,6 +16,8 @@ library(janitor)
 library(lubridate)
 library(ggplot2)
 library(patchwork)
+library(dplyr)
+library(knitr) 
 
 data("instacart")
 ```
@@ -110,8 +112,13 @@ top3_tbl <- instacart |>
   select(aisle, rank_in_aisle, product_name, times_ordered) |>
   ungroup()
 
-# Print
-top3_tbl
+knitr::kable(
+  top3_tbl,
+  caption = "Top 3 most-ordered items in selected aisles",
+  col.names = c("Aisle", "Rank", "Product", "Times ordered"),
+  align = c("l", "c", "l", "r"),
+  format.args = list(big.mark = ",")
+)
 ```
 
 ### Mean Hour of The Day
@@ -132,7 +139,11 @@ mean_hour_tbl <- instacart |>
   rename(Product = product_name)
 
 # Print
-mean_hour_tbl
+knitr::kable(
+  mean_hour_tbl,
+  caption = "Mean hour of the day for Pink Lady Apples and Coffee Ice Cream",
+  align = c("l", rep("c", 7))
+)
 ```
 
 Promblem 2
@@ -201,7 +212,14 @@ summary_tbl <- zip_month_counts |>
   arrange(match(coverage,
                 c("total 116 month","<10 month","partial 10–115 month")))
 
-summary_tbl
+knitr::kable(
+  summary_tbl,
+  caption = "ZIP coverage categories",
+  col.names = c("Coverage", "Count of ZIPs"),
+  align = c("l", "r"),
+  format.args = list(big.mark = ",")
+)
+
 ```
 Zillow reports a monthly value only when there are enough valid rental listings; otherwise the month is NA. ZIPs with active residential markets therefore show values in all 116 months.Non-residential or special-use ZIPs and places with very few listings are often missing many months.Occasional gaps also come from boundary changes.
 
@@ -234,8 +252,13 @@ table_wide <- borough_year |>
   arrange(borough, year) |>
   pivot_wider(names_from = year, values_from = avg_rent)
 
-# Print
-print(table_wide)
+# Knitr Print
+knitr::kable(
+  table_wide,
+  caption = "Average ZORI by borough and year (rounded to nearest integer)",
+  align = c("l", rep("c", ncol(table_wide) - 1)),
+  format.args = list(big.mark = ",")
+)
 
 ```
 
@@ -384,6 +407,86 @@ range(data3$minute)
 
 ```
 
+### Table For The Number of Men And Women In Each Education Category
 ```{r}
+covar_unique <- covar |> distinct(SEQN, .keep_all = TRUE)
+
+# Table
+edu_sex_tbl <- covar_unique |>
+  tabyl(education, sex) |>
+  adorn_totals("row") |>
+  adorn_totals("col")
+
+# Read friendly
+kable(
+  edu_sex_tbl,
+  align = "c",
+  caption = "Number of men and women by education (age ≥ 21)"
+)
+```
+
+### visualization Of The Age Distributions
+```{r}
+ggplot(covar_unique, aes(x = age, fill = sex)) +
+  geom_histogram(position = "identity", alpha = 0.5, bins = 20) +
+  facet_wrap(~ education, ncol = 1) +
+  labs(title = "Age distributions (overlayed) by education", x = "Age", y = "Count", fill = "Sex")
+```
+The sample is quite balanced by sex (120 men, 111 women), and the largest education group is More than high school, with men and women similar in size.
+Ages skew younger in the “More than high school” group, while “High school equivalent” and especially “Less than high school” include more older adults with noticeable counts into the 60s–80s.
+
+###  Plot Total Activity And Age
+```{r}
+# Sum minute-level MIMS over the 1440 minutes to get each participant’s total daily activity.
+total_act <- data3 |>
+  group_by(SEQN, sex, age, education) |>
+  summarize(total_activity = sum(MIMS, na.rm = TRUE), .groups = "drop")
+
+# Plot y = total activity, x = age, facet by education; add LOESS smooth
+p_total <- ggplot(total_act, aes(x = age, y = total_activity, color = sex)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "loess", se = FALSE) +
+  facet_wrap(~ education, ncol = 1) +
+  labs(
+    title = "Total daily activity vs age by education level",
+    x = "Age (years)",
+    y = "Total activity (sum of minute-level MIMS)",
+    color = "Sex"
+  ) 
+
+p_total
 
 ```
+
+
+```{r}
+# For each education, sex, minute, compute the mean MIMS across participants
+diurnal_mean <- data3 |>
+  group_by(education, sex, minute) |>
+  summarize(mims_mean = mean(MIMS, na.rm = TRUE), .groups = "drop") |>
+  mutate(hour = (minute - 1) / 60)
+```
+Overall, total activity is roughly flat to slightly decreasing with age, with the clearest midlife dip in the More than high school panel.
+Sex differences are small, male and female lines almost overlap.
+Points are widely spread, so same age participants vary a lot.
+
+### Three-Panel Plot 
+```{r}
+# Plot x = hour of day, y = mean MIMS, facet by education; add smooth trend
+p_diurnal <- ggplot(diurnal_mean, aes(x = hour, y = mims_mean, color = sex)) +
+  geom_line(alpha = 0.7) +
+  geom_smooth(se = FALSE, span = 0.1) +
+  facet_wrap(~ education, ncol = 1) +
+  scale_x_continuous(breaks = seq(0, 24, by = 4),
+                     labels = sprintf("%02d:00", seq(0, 24, by = 4))) +
+  labs(
+    title = "24-hour activity time course by education (color = sex)",
+    x = "Clock time",
+    y = "Mean minute-level activity (MIMS)",
+    color = "Sex"
+  )
+p_diurnal
+```
+Activity is nearly constant across the 24 hours in all three panels, with only small ups and downs.
+Male and female lines almost overlap, females are slightly higher at many times, but the difference is small.
+The “More than high school” group sits a bit lower overall than the other two education groups, then education differences appear modest.
